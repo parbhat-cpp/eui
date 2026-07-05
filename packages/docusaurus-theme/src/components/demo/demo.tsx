@@ -20,6 +20,7 @@ import {
   useEuiMemoizedStyles,
   copyToClipboard,
   UseEuiTheme,
+  useIsDarkMode,
 } from '@elastic/eui';
 import { css } from '@emotion/react';
 import { demoDefaultScope } from '@theme/Demo/default_scope';
@@ -79,6 +80,7 @@ export interface DemoProps extends PropsWithChildren {
   extraFiles?: ExtraFiles;
   previewPadding?: DemoPreviewProps['padding'];
   previewWrapper?: DemoPreviewProps['wrapperComponent'];
+  previewWrapperSource?: string;
 }
 
 const getDemoStyles = (euiTheme: UseEuiTheme) => ({
@@ -100,11 +102,14 @@ export const Demo = ({
   isSourceOpen: _isSourceOpen = false,
   previewPadding,
   previewWrapper,
+  previewWrapperSource,
 }: DemoProps) => {
   const styles = useEuiMemoizedStyles(getDemoStyles);
+  const isDarkMode = useIsDarkMode();
   const [sources, setSources] = useState<DemoSourceMeta[]>([]);
   const [isSourceOpen, setIsSourceOpen] = useState<boolean>(_isSourceOpen);
   const activeSource = sources[0] || null;
+  const prismTheme = isDarkMode ? prismThemes.dracula : prismThemes.github;
 
   // liveProviderKey restarts the demo to its initial state
   const [liveProviderKey, setLiveProviderKey] = useState<number>(0);
@@ -140,7 +145,7 @@ export const Demo = ({
           key={liveProviderKey}
           code={activeSource?.code || ''}
           transformCode={demoCodeTransformer}
-          theme={prismThemes.dracula}
+          theme={prismTheme}
           scope={finalScope}
         >
           <DemoPreview
@@ -153,6 +158,7 @@ export const Demo = ({
             activeSource={activeSource}
             extraFiles={extraFiles}
             sources={sources}
+            previewWrapperSource={previewWrapperSource}
             onClickCopyToClipboard={onClickCopyToClipboard}
             onClickReloadExample={onClickReloadExample}
           />

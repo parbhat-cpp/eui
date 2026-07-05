@@ -1,0 +1,165 @@
+################################################################################
+# This workflow file is part of the chain of workflows focused on testing
+# EUI changes in Kibana as part of our regression integration testing.
+#
+# This workflow is triggered from the `update_kibana_dependencies.yml`
+# workflow and should not be run manually.
+#
+# Due to technical limitations and security rules, steps had to be divided
+# into multiple subworkflows that must be triggered through
+# `workflow_dispatch` and not the usual `workflow_call`.
+################################################################################
+
+name: 'Update Kibana dependencies - Prepare changes'
+
+on:
+  workflow_dispatch:
+    inputs:
+      dependencies:
+        description: JSON-serialized map of dependencies to update
+        type: string
+        required: true
+      # Passed through to `update_kibana_dependencies__open_pr.yml` workflow
+      pr_title:
+        description: PR title
+        required: true
+        type: string
+      pr_body:
+        description: PR body
+        required: true
+        type: string
+      source_pr_number:
+        description: Source PR number that triggered this workflow
+        type: number
+  workflow_call:
+    inputs:
+      dependencies:
+        description: JSON-serialized map of dependencies to update
+        type: string
+        required: true
+      # Passed through to `update_kibana_dependencies__open_pr.yml` workflow
+      pr_title:
+        description: PR title
+        required: true
+        type: string
+      pr_body:
+        description: PR body
+        required: true
+        type: string
+    outputs:
+      branch_name:
+        description: Name of the branch created in the elastic/eui-kibana repository
+        value: ${{ jobs.update.outputs.branch_name }}
+
+permissions:
+  id-token: write
+
+jobs:
+  update:
+    name: Prepare changes
+    runs-on: ubuntu-latest
+    outputs:
+      branch_name: ${{ steps.git_branch.outputs.BRANCH_NAME }}
+    steps:
+      - name: Verify dependencies input
+        env:
+          DEPENDENCIES: ${{ inputs.dependencies }}
+        # language=bash
+        run: |
+          num_deps=$(jq 'map(select(has("name") and has("version"))) | length' <<< "$DEPENDENCIES") || exit_code=$?
+          if [[ "$exit_code" -ne 0 ]]; then
+            echo "::error::Invalid dependencies input"
+            exit 2
+          elif [[ "$num_deps" -eq 0 ]]; then
+            echo "::warning::No dependencies to update"
+            exit 1
+          else
+            echo "$num_deps dependencies to update"
+          fi
+      - name: Checkout the upstream elastic/kibana repository
+        uses: actions/checkout@v6
+        with:
+          repository: elastic/kibana
+          fetch-depth: 1
+          persist-credentials: false # We use different credentials for other git operations
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false # Don't cache anything as it's a different repository
+      - name: Fetch ephemeral GitHub token
+        id: fetch_ephemeral_token
+        uses: elastic/ci-gh-actions/fetch-github-token@v1.5.3
+        with:
+          vault-instance: ci-prod
+          vault-role: token-policy-4fabc48bd03f
+      - name: Configure git
+        env:
+          GH_TOKEN: ${{ steps.fetch_ephemeral_token.outputs.token }}
+        # language=bash
+        run: |
+          gh auth setup-git
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git remote add fork https://github.com/elastic/eui-kibana.git
+      - name: Create new branch
+        id: git_branch
+        # language=bash
+        run: |
+          branch_name="update-dependencies/$(date +%s)"
+          git checkout -b "$branch_name"
+          echo "BRANCH_NAME=$branch_name" >> "$GITHUB_OUTPUT"
+          echo "::debug::Created branch '$branch_name'"
+      - name: Update dependency versions
+        env:
+          DEPENDENCIES: ${{ inputs.dependencies }}
+        # language=bash
+        run: |
+          jq -j '.[] | .name, "\u0000", .version, "\u0000"' <<< "$DEPENDENCIES" |
+          xargs -0 -n 2 bash -c '
+            pkg="$0"
+            ver="$1"
+            if [[ $(npm pkg get "devDependencies.$pkg") != "{}" ]]; then
+              npm pkg set "devDependencies.$pkg=$ver"
+            elif [[ $(npm pkg get "dependencies.$pkg") != "{}" ]]; then
+              npm pkg set "dependencies.$pkg=$ver"
+            else
+              echo "::warning::Skipping $pkg: Not found in either dependencies or devDependencies";
+            fi'
+      - name: Run Kibana bootstrap scripts
+        # language=bash
+        run: yarn kbn bootstrap
+      - name: Commit changed files
+        # language=bash
+        run: |
+          git add package.json yarn.lock src/platform/packages/private/kbn-ui-shared-deps-npm/version_dependencies.txt
+          git commit -m "chore: update dependencies"
+      - name: Push branch to elastic/eui-kibana
+        env:
+          GH_TOKEN: ${{ steps.fetch_ephemeral_token.outputs.token }}
+          BRANCH_NAME: ${{ steps.git_branch.outputs.BRANCH_NAME }}
+        # language=bash
+        run: git push -u fork "$BRANCH_NAME"
+      - name: Trigger workflow to open PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_TITLE: ${{ inputs.pr_title }}
+          PR_BODY: ${{ inputs.pr_body }}
+          BRANCH_NAME: ${{ steps.git_branch.outputs.BRANCH_NAME }}
+          SOURCE_PR_NUMBER: ${{ inputs.source_pr_number }}
+        # language=bash
+        run: |
+          # --repo is required because we're in the context of elastic/kibana right now
+          workflow_url=$(gh workflow run update_kibana_dependencies__open_pr.yml \
+            --repo elastic/eui \
+            -f pr_title="$PR_TITLE" \
+            -f pr_body="$PR_BODY" \
+            -f pr_head="$BRANCH_NAME" \
+            -f source_pr_number="$SOURCE_PR_NUMBER")
+
+          {
+            echo "### Success :rocket:"
+            echo ""
+            echo "* Changes are prepared and pushed: https://github.com/elastic/eui-kibana/tree/$BRANCH_NAME"
+            echo "* Pull request creation workflow triggered: $workflow_url"
+          } >> "$GITHUB_STEP_SUMMARY"

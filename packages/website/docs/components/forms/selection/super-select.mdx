@@ -3,6 +3,8 @@ sidebar_position: 3
 keywords: [EuiSuperSelect]
 ---
 
+import displayTogglesSource from '!raw-loader!../../../../src/components/display_toggles/display_toggles';
+
 # Super select
 
 ```mdx-code-block
@@ -79,7 +81,7 @@ export default () => {
 
 ## More complex
 
-Both `inputDisplay` and `dropdownDisplay` accept React nodes. Therefore you can pass some descriptions with each option to show in the dropdown. If your options will most likely be multi-line, add the `hasDividers` prop to show borders between options.
+Both `inputDisplay` and `dropdownDisplay` accept React nodes. Therefore you can pass some descriptions with each option to show in the dropdown.
 
 A `placeholder` prop may also be passed that accepts string as well as React nodes (to match your `inputDisplay` if necessary). This placeholder will only show when `valueOfSelected` is empty.
 
@@ -139,8 +141,6 @@ export default () => {
       valueOfSelected={value}
       placeholder="Select an option"
       onChange={(value) => onChange(value)}
-      itemLayoutAlign="top"
-      hasDividers
     />
   );
 };
@@ -150,9 +150,11 @@ export default () => {
 
 You can pass the same props as you normally would to **EuiSelect** like disabled, isLoading, compressed, etc.
 
+<Demo extraFiles={{ 'display_toggles.tsx': displayTogglesSource }}>
 ```tsx interactive
 import React, { useState } from 'react';
 import { EuiSuperSelect } from '@elastic/eui';
+import { DisplayToggles } from './display_toggles';
 
 export default () => {
   const options = [
@@ -193,6 +195,7 @@ export default () => {
   );
 };
 ```
+</Demo>
 import FormUsage from '../_partials/form-usage.mdx';
 
 <FormUsage />

@@ -133,6 +133,7 @@ export type EuiSelectableProps<T = {}> = CommonProps &
      * `false`: allows multiple selection
      * `true`: only allows one selection
      * `always`: can and must have only one selection
+     * @default false
      */
     singleSelection?: EuiSelectableOptionsListProps['singleSelection'];
     /**
@@ -786,15 +787,6 @@ export class EuiSelectable<T = {}> extends Component<
     const resultsLength = visibleOptions.filter(
       (option) => !option.disabled
     ).length;
-    const listScreenReaderStatus = searchable && (
-      <EuiI18n
-        token="euiSelectable.searchResults"
-        default={({ resultsLength }) =>
-          `${resultsLength} result${resultsLength === 1 ? '' : 's'} available`
-        }
-        values={{ resultsLength }}
-      />
-    );
 
     const listAriaDescribedbyId = this.rootId('instructions');
     const listAccessibleName = getAccessibleName(
@@ -809,11 +801,25 @@ export class EuiSelectable<T = {}> extends Component<
         {(placeholderName: string) => (
           <>
             {searchable && (
-              <EuiScreenReaderLive
-                isActive={messageContent != null || activeOptionIndex != null}
+              <EuiI18n
+                token="euiSelectable.searchResults"
+                default={({ resultsLength }: { resultsLength: number }) =>
+                  `${resultsLength} result${
+                    resultsLength === 1 ? '' : 's'
+                  } available`
+                }
+                values={{ resultsLength }}
               >
-                {messageContent || listScreenReaderStatus}
-              </EuiScreenReaderLive>
+                {(searchResults: string) => (
+                  <EuiScreenReaderLive
+                    isActive={
+                      messageContent != null || activeOptionIndex != null
+                    }
+                  >
+                    {messageContent || searchResults}
+                  </EuiScreenReaderLive>
+                )}
+              </EuiI18n>
             )}
 
             {messageContent ? (

@@ -9,6 +9,8 @@
 export const typeToPathMap = {
   accessibility: () => import('./assets/accessibility'),
   addDataApp: () => import('./assets/app_add_data'),
+  addToChat: () => import('./assets/add_to_chat'),
+  addToDashboard: () => import('./assets/add_to_dashboard'),
   advancedSettingsApp: () => import('./assets/app_advanced_settings'),
   agentApp: () => import('./assets/app_fleet'),
   aggregate: () => import('./assets/aggregate'),
@@ -398,6 +400,7 @@ export const typeToPathMap = {
   logoSketch: () => import('./assets/logo_sketch'),
   logoSlack: () => import('./assets/logo_slack'),
   logoUptime: () => import('./assets/logo_uptime'),
+  logoVectorDB: () => import('./assets/logo_vector_db'),
   logoVulnerabilityManagement: () =>
     import('./assets/logo_vulnerability_management'),
   logoWebhook: () => import('./assets/logo_webhook'),
@@ -521,6 +524,7 @@ export const typeToPathMap = {
   sessionViewer: () => import('./assets/session_viewer'),
   shard: () => import('./assets/shard'),
   share: () => import('./assets/share'),
+  significantEvents: () => import('./assets/significant_events'),
   singleMetricViewer: () => import('./assets/single_metric_viewer'),
   snowflake: () => import('./assets/snowflake'),
   sortAscending: () => import('./assets/sort_ascending'),

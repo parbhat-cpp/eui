@@ -2,6 +2,8 @@ import { IconType } from '@elastic/eui';
 
 export const iconTypes: Array<IconType> = [
   'accessibility',
+  'addToChat',
+  'addToDashboard',
   'aggregate',
   'alignBottom',
   'alignBottomLeft',
@@ -264,6 +266,7 @@ export const iconTypes: Array<IconType> = [
   'sessionViewer', // To be deprecated
   'shard',
   'share',
+  'significantEvents',
   'singleMetricViewer', // To be deprecated
   'snowflake',
   'sortAscending',
